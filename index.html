@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Device Follow-up (PDF import)</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--tx:#1a2230;--mu:#667085;--bd:#d9dee7;--ac:#1d4ed8;--acx:#fff;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f141c;--card:#182030;--tx:#e8ecf3;--mu:#98a2b3;--bd:#2b3648;--ac:#6ea0ff;--acx:#0b1220}}
+:root[data-theme="dark"]{--bg:#0f141c;--card:#182030;--tx:#e8ecf3;--mu:#98a2b3;--bd:#2b3648;--ac:#6ea0ff;--acx:#0b1220}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.45 "Sarabun",system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:720px;margin:0 auto;padding:16px}
+h1{font-size:20px;margin:4px 0 12px}
+h2{font-size:14px;margin:0 0 10px;color:var(--mu);text-transform:uppercase;letter-spacing:.04em}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;margin-bottom:14px}
+.g{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+label{display:block;font-size:12px;color:var(--mu);margin-bottom:3px}
+input,textarea,select{width:100%;padding:9px 10px;font:inherit;color:var(--tx);background:var(--bg);border:1px solid var(--bd);border-radius:8px}
+input:focus,textarea:focus,select:focus{outline:2px solid var(--ac);border-color:transparent}
+.tw{overflow-x:auto}
+table.f{width:100%;border-collapse:collapse;min-width:360px}
+table.f th{font-size:12px;color:var(--mu);font-weight:600;text-align:center;padding:2px 4px}
+table.f td{padding:3px 4px}
+table.f td:first-child{white-space:nowrap;font-size:13px;padding-right:8px}
+table.f input{text-align:center;padding:8px 4px}
+.sub td{padding-top:10px!important;font-weight:600;color:var(--mu);font-size:12px}
+.bar{display:flex;gap:8px;flex-wrap:wrap;position:sticky;bottom:0;padding:10px 0 calc(10px + env(safe-area-inset-bottom,0px));background:linear-gradient(transparent,var(--bg) 30%)}
+button{font:inherit;padding:11px 16px;border-radius:10px;border:1px solid var(--bd);background:var(--card);color:var(--tx);cursor:pointer}
+button.p{background:var(--ac);color:var(--acx);border-color:var(--ac);font-weight:600;flex:1}
+#quick{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:12px;color:var(--mu);margin-bottom:8px;min-height:34px}#quick button{padding:6px 12px;font-size:13px;border-radius:999px;border-color:var(--ac);color:var(--ac)}
+#msg{font-size:13px;color:var(--mu);min-height:18px;margin:2px 0 8px}
+.rep{background:#fff;color:#111;border:1px solid var(--bd);border-radius:12px;padding:18px;overflow-x:auto}
+</style>
+</head>
+<body>
+<main>
+<h1>Pacemaker / ICD / CRT Follow-up</h1>
+
+<div class="card"><h2>นำเข้าจาก PDF (Medtronic Patient Information Report)</h2>
+  <input type="file" id="pdfIn" accept="application/pdf,.pdf">
+  <div style="font-size:12px;color:var(--mu);margin-top:6px">อ่านในเบราว์เซอร์ ไม่อัปโหลดไฟล์ไปที่ไหน และไม่นำชื่อ/ID ผู้ป่วยเข้ามา ตรวจค่าก่อน export ทุกครั้ง</div></div>
+<div class="card"><h2>การตรวจ</h2><div class="g" id="pt"></div></div>
+<div class="card"><h2>อุปกรณ์</h2><div class="g" id="dev"></div></div>
+<div class="card"><h2>Battery</h2>
+  <div class="g">
+    <div><label>Battery (V)</label><input data-k="batt"></div>
+    <div><label>Est. longevity</label>
+      <input id="estInp" data-k="est" inputmode="decimal" placeholder="เช่น 4.5" style="margin-bottom:6px">
+      <div style="display:flex;gap:6px">
+        <select data-k="estunit" style="flex:1"><option>Years</option><option>Months</option></select>
+        <button type="button" id="ltBtn" title="ใส่ &lt;" style="flex:0 0 44px;padding:9px 0">&lt;</button>
+      </div>
+    </div>
+  </div>
+  <label style="display:flex;align-items:center;gap:6px;margin-top:10px;font-size:13px"><input type="checkbox" data-k="minchk" style="width:auto"> Min</label>
+  <div id="minWrap" style="display:none;margin-top:6px">
+    <label id="minLbl">Minimum</label>
+    <div style="display:flex;gap:6px">
+      <input id="minInp" data-k="minval" inputmode="decimal" style="flex:1">
+      <select data-k="minunit" style="flex:0 0 76px"><option>Years</option><option>Months</option></select>
+      <button type="button" id="minLtBtn" title="ใส่ &lt;" style="flex:0 0 40px;padding:9px 0">&lt;</button>
+    </div>
+  </div>
+  <label style="display:flex;align-items:center;gap:6px;margin-top:10px;font-size:13px"><input type="checkbox" data-k="lowchk" style="width:auto"> Low battery</label>
+  <div class="g" id="lowWrap" style="display:none;margin-top:6px">
+    <div><label>Battery impedance (Ω)</label><div style="display:flex;gap:6px">
+      <input id="lowohmInp" data-k="lowohm" inputmode="decimal" style="flex:1">
+      <button type="button" id="gtBtn" title="ใส่ &gt;" style="flex:0 0 40px;padding:9px 0">&gt;</button>
+    </div></div>
+    <div><label>RRT (V)</label><input data-k="rrt" inputmode="decimal"></div>
+  </div>
+</div>
+<div class="card"><h2>ค่าที่วัดได้ / Setting</h2>
+  <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:12px;margin:0 0 8px">
+    <label style="display:flex;align-items:center;gap:4px"><input type="checkbox" data-k="bbap_A" style="width:auto"> A: BBaP</label>
+    <label style="display:flex;align-items:center;gap:4px"><input type="checkbox" data-k="lbbap_RV" style="width:auto"> RV: LBBaP</label>
+    <label style="display:flex;align-items:center;gap:4px"><input type="checkbox" data-k="lbbap_LV" style="width:auto"> LV: LBBaP</label>
+  </div>
+  <label style="display:flex;align-items:center;gap:6px;font-size:13px;margin-bottom:8px"><input type="checkbox" data-k="thr2chk" style="width:auto"> เพิ่มค่าที่ 2 (Threshold/Pulse width)</label>
+  <div id="quick"></div><div class="tw"><table class="f" id="tbl"></table></div></div>
+<div class="card"><h2>LV Vector</h2>
+  <label style="display:flex;align-items:center;gap:6px;font-size:13px"><input type="checkbox" data-k="lvvecchk" style="width:auto"> Vector</label>
+  <div class="g" id="lvvecWrap" style="display:none;margin-top:8px">
+    <div><label>LV Threshold Vector</label><select data-k="lvvecopt">
+      <option value="">— เลือก —</option>
+      <option>LV to LV</option>
+      <option>LV to RVcoil</option>
+      <option>RVcoil to LV</option>
+      <option>LVtip to LVring</option>
+    </select>
+    <div style="display:flex;gap:6px;margin-top:6px">
+      <input id="lvn1" data-k="lvvecn1" placeholder="เลข 1" inputmode="numeric" style="flex:1">
+      <input id="lvn2" data-k="lvvecn2" placeholder="เลข 2" inputmode="numeric" style="flex:1">
+    </div></div>
+    <div><label>V-V Timing</label><div style="display:flex;gap:6px">
+      <select data-k="vvdir" style="flex:1"><option>LV→RV</option><option>RV→LV</option></select>
+      <input data-k="vvms" placeholder="ms" inputmode="decimal" style="flex:0 0 70px">
+    </div></div>
+  </div>
+</div>
+<div class="card"><h2>Rhythm / บันทึกเพิ่มเติม</h2>
+  <label>Rhythm</label><input data-k="rhythm" placeholder="เช่น AP-VP" style="margin-bottom:10px">
+  <label>Notes</label><textarea data-k="notes" rows="3" placeholder="เช่น No episode"></textarea></div>
+
+<div class="bar">
+  <button class="p" id="pdf">Export PDF</button>
+  <button id="img">Export รูป (.png)</button>
+  <button id="exp">.html</button>
+  <button id="txt">Export .txt</button>
+  <button id="cp">Copy</button>
+  <button id="clr">ล้างค่า</button>
+</div>
+<div id="msg"></div>
+
+<h2>Preview</h2>
+<div class="rep" id="rep"></div>
+</main>
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const V={};
+const pt=[['fu','วันที่ตรวจ (Follow-up date)','date']];
+const dev=[['model','Model'],['doi','DOI (วันที่ใส่)','date'],['mode','Mode'],['rate','Rate (ppm)'],['chg','Charge time (s)']];
+const C=['A','RV','LV'];
+const RL={pace:'Pacing(%)',sense:'Sensing(mV)',imp:'Impedance(Ω)',defib:'ICD Defib/SVC',thr:'Threshold(V)',thrms:'at(ms)',thr2:'Threshold 2(V)',thrms2:'at 2(ms)',amp:'Amplitude(V)',pw:'Pulse width(ms)',sens:'Sensitivity(mV)'};
+const meas=[['pace','Pacing (%)'],['sense','Sensing (mV)'],['imp','Impedance (Ω)'],['defib','ICD Defib/SVC (Ω)'],['thr','Threshold (V)'],['thrms','at (ms)']];
+const meas2=[['thr2','Threshold 2 (V)'],['thrms2','at 2 (ms)']];
+const set=[['amp','Amplitude (V)'],['pw','Pulse width (ms)'],['sens','Sensitivity (mV)']];
+const measDesc=meas.map(([k,l])=>({k,l:RL[k]||l,get:c=>{
+  let v=V[k+'_'+c]||'';
+  if(V.thr2chk){const k2=k==='thr'?'thr2':k==='thrms'?'thrms2':null;if(k2){const v2=V[k2+'_'+c]||'';if(v2)v=v?v+'/'+v2:v2}}
+  return v;
+}}));
+const setDesc=set.map(([k,l])=>({k,l:RL[k]||l,get:c=>V[k+'_'+c]||''}));
+const descRows=desc=>desc.map(d=>`<tr><td class="l">${d.l}</td>${C.map(c=>{const v=d.get(c);return `<td>${v?esc(v):''}</td>`}).join('')}</tr>`).join('');
+const VEC_TPL={'LV to LV':'LV{1} to LV{2}','LV to RVcoil':'LV{1} to RVcoil'};
+const VEC_BLANKS={'LV to LV':2,'LV to RVcoil':1};
+function lvVecText(){const opt=V.lvvecopt||'';if(!opt)return'';const tpl=VEC_TPL[opt];if(!tpl)return opt;return tpl.replace('{1}',gv('lvvecn1')||'_').replace('{2}',gv('lvvecn2')||'_')}
+function unitWord(u,val){const n=parseFloat(String(val||'').replace(/[<>]/g,''));const isMonth=u==='Months';if(isMonth)return n===1?'month':'months';return n===1?'year':'years'}
+const lvLine=t=>`<tr><td class="l" style="border:0"></td><td style="border:0"></td><td style="border:0"></td><td style="border:0;font-weight:400;font-size:10px">${t}</td></tr>`;
+function lvVecRows(){
+  if(!V.lvvecchk)return'';
+  const vt=lvVecText();
+  const timing=(V.vvdir||V.vvms)?(esc(V.vvdir||'LV→RV')+' '+gv('vvms')+' ms'):'';
+  return (vt?lvLine(vt):'')+(timing?lvLine(timing):'');
+}
+const fld=([k,l,t])=>`<div><label>${l}</label><input data-k="${k}" type="${t||'text'}"></div>`;
+$('#pt').innerHTML=pt.map(fld).join('');
+$('#dev').innerHTML=`<div style="grid-column:1/-1"><label>ชนิดอุปกรณ์</label><select data-k="dtype"><option value="">— เลือก —</option><option>Pacemaker</option><option>ICD</option><option>CRT</option><option>CRT-D</option><option value="other">อื่นๆ (ระบุ)</option></select><input id="dother" data-k="dother" placeholder="ระบุชนิดอุปกรณ์" style="display:none;margin-top:8px"></div>`+dev.map(fld).join('');
+const row=(([k,l],cls)=>`<tr${cls?` class="${cls}"`:''}><td>${l}</td>${C.map(c=>`<td><input data-k="${k}_${c}" inputmode="decimal"></td>`).join('')}</tr>`);
+const mainRows=meas.map(m=>row(m)+(m[0]==='thrms'?meas2.map(m2=>row(m2,'x2')).join(''):'')).join('');
+$('#tbl').innerHTML=`<tr><th></th>${C.map(c=>`<th>${c}</th>`).join('')}</tr>`+mainRows+`<tr class="sub"><td colspan="4">Setting</td></tr>`+set.map(m=>row(m)).join('');
+const fd=v=>{if(!v)return'';const d=new Date(v);return isNaN(d)?v:d.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})};
+const dl=(items)=>items.filter(([k])=>V[k]).map(([k,l,t])=>`<dt>${l}</dt><dd>${esc(t?fd(V[k]):V[k])}</dd>`).join('');
+function tbl(list){
+  const cs=C.filter(c=>list.some(([k])=>V[k+'_'+c]));
+  if(!cs.length)return'';
+  return `<table><tr><th></th>${cs.map(c=>`<th>${c}</th>`).join('')}</tr>`+
+   list.filter(([k])=>cs.some(c=>V[k+'_'+c])).map(([k,l])=>`<tr><td>${l}</td>${cs.map(c=>`<td>${esc(V[k+'_'+c])||'-'}</td>`).join('')}</tr>`).join('')+`</table>`;
+}
+const DOC_CSS='.doc{font:12px/1.35 Sarabun,"Noto Sans Thai",system-ui,sans-serif;color:#1e3a8a;background:#fff;width:300px;max-width:100%;margin:0 auto}.doc .pt{font-size:11px;color:#111;display:flex;flex-wrap:wrap;gap:1px 14px;margin-bottom:5px}.doc .rh{font-weight:700;color:#111;margin:0 0 3px 4px;min-height:15px}.doc .st{border:2px solid #1e3a8a;padding:5px 6px}.doc .hd{display:flex;justify-content:space-between;align-items:baseline;font-size:11px;gap:8px}.doc .lg{font-weight:800;font-size:16px;letter-spacing:-.3px}.doc .ttl{font-weight:600;border-bottom:1px solid #1e3a8a;margin:3px 0 4px;padding-bottom:1px}.doc .ln{display:flex;gap:8px;margin:3px 0}.doc .ln>span{flex:1;display:flex;gap:4px;align-items:baseline;white-space:nowrap}.doc .u{flex:1;min-width:0;border-bottom:1px solid #1e3a8a;color:#111;font-weight:600;font-style:normal;text-align:center;min-height:15px}.doc table{width:100%;border-collapse:separate;border-spacing:3px 2px;margin:3px 0 0}.doc th{font-weight:400;text-align:center}.doc td{border-bottom:1px solid #1e3a8a;text-align:center;color:#111;font-weight:600;height:17px;padding:0}.doc th.l,.doc td.l{text-align:left;border:0;font-weight:400;color:#1e3a8a;white-space:nowrap;width:1%}.doc td.sh{text-align:left;border:0;font-weight:600;padding-top:4px}.doc .nt{color:#111;font-weight:600;margin:5px 0 0 4px;white-space:pre-wrap}';
+{const st=document.createElement('style');st.textContent=DOC_CSS;document.head.appendChild(st)}
+const devType=()=>V.dtype==='other'?(V.dother||'อื่นๆ'):(V.dtype||'');
+const gv=k=>V[k]?esc(V[k]):'';
+const gdv=k=>V[k]?esc(fd(V[k])):'';
+const U=v=>`<i class="u">${v}</i>`;
+const mrows=list=>list.map(([k,l])=>`<tr><td class="l">${RL[k]||l}</td>${C.map(c=>`<td>${gv(k+'_'+c)}</td>`).join('')}</tr>`).join('');
+const colHead=c=>c+(c==='A'&&V.bbap_A?' (BBaP)':'')+(c==='RV'&&V.lbbap_RV?' (LBBaP)':'')+(c==='LV'&&V.lbbap_LV?' (LBBaP)':'');
+function body(){
+  return `<div class="doc"><div class="rh">${gv('rhythm')}</div>
+<div class="st"><div class="hd"><span class="lg">Medtronic</span><span style="display:flex;gap:4px;flex:1;max-width:60%">Follow up date ${U(gdv('fu'))}</span></div>
+<div class="ttl">${esc(devType()||'Pacemaker / ICD / CRT / CRT-D')} F/U</div>
+<div class="ln"><span>Model ${U(gv('model'))}</span><span>DOI ${U(gdv('doi'))}</span></div>
+<div class="ln"><span>Mode ${U(gv('mode'))}</span><span>Rate ${U(gv('rate'))} ppm</span></div>
+<div class="ln"><span>Battery ${U(gv('batt'))} V${V.lowchk&&V.lowohm?`, ${gv('lowohm')} ohms`:''}</span><span>Est. ${U(gv('est'))} ${unitWord(V.estunit,V.est)}</span></div>
+${(V.lowchk&&V.rrt)||(V.minchk&&V.minval)?`<div class="ln"><span>${V.lowchk&&V.rrt?`RRT ${gv('rrt')} V`:''}</span><span>${V.minchk&&V.minval?`Min ${gv('minval')} ${unitWord(V.minunit,V.minval)}`:''}</span></div>`:''}
+<div class="ln"><span>Charge time(s) ${U(gv('chg'))}</span></div>
+<table><tr><th class="l">Chamber</th>${C.map(c=>`<th>${colHead(c)}</th>`).join('')}</tr>${descRows(measDesc)}${lvVecRows()}<tr><td class="sh" colspan="4">Setting</td></tr>${descRows(setDesc)}</table></div>
+${V.notes?`<div class="nt">${esc(V.notes)}</div>`:''}</div>`;
+}
+const render=()=>{
+  $('#rep').innerHTML=body();
+  $('#dother').style.display=V.dtype==='other'?'':'none';
+  $('#minWrap').style.display=V.minchk?'':'none';
+
+  $('#lowWrap').style.display=V.lowchk?'':'none';
+  $('#lvvecWrap').style.display=V.lvvecchk?'':'none';
+  document.querySelectorAll('#tbl tr.x2').forEach(tr=>tr.style.display=V.thr2chk?'':'none');
+  const _u=VEC_BLANKS[V.lvvecopt]||0;
+  $('#lvn1').style.display=_u>=1?'':'none';
+  $('#lvn2').style.display=_u>=2?'':'none';
+};
+function text(){
+  const L=['DEVICE FOLLOW-UP REPORT'];
+  const p=(l,k,d)=>V[k]&&L.push(l+': '+(d?fd(V[k]):V[k]));
+  p('Follow-up date','fu',1);L.push('');
+  if(V.dtype)L.push('Type: '+devType());p('Model','model');p('DOI','doi',1);p('Mode','mode');p('Rate (ppm)','rate');p('Battery (V)','batt');
+  if(V.est)L.push('Est. longevity: '+V.est+' '+unitWord(V.estunit,V.est));
+  if(V.minchk&&V.minval)L.push('Minimum: '+V.minval+' '+unitWord(V.minunit,V.minval));
+  if(V.lowchk){if(V.lowohm)L.push('Battery impedance (ohms): '+V.lowohm);if(V.rrt)L.push('RRT (V): '+V.rrt);}
+  p('Charge time (s)','chg');p('Rhythm','rhythm');
+  if(V.bbap_A)L.push('A: BBaP');if(V.lbbap_RV)L.push('RV: LBBaP');if(V.lbbap_LV)L.push('LV: LBBaP');L.push('');
+  const t=(title,list)=>{const cs=C.filter(c=>list.some(([k])=>V[k+'_'+c]));if(!cs.length)return;L.push(title+' ['+cs.join(' / ')+']');
+    list.forEach(([k,l])=>{if(cs.some(c=>V[k+'_'+c]))L.push('  '+l+': '+cs.map(c=>V[k+'_'+c]||'-').join(' / '))});L.push('')};
+  const td=(title,desc)=>{const cs=C.filter(c=>desc.some(d=>d.get(c)));if(!cs.length)return;L.push(title+' ['+cs.join(' / ')+']');
+    desc.forEach(d=>{if(cs.some(c=>d.get(c)))L.push('  '+d.l+': '+cs.map(c=>d.get(c)||'-').join(' / '))});L.push('')};
+  td('Measurements',measDesc);
+  if(V.lvvecchk){const vt=lvVecText();if(vt)L.push('LV Vector: '+vt);if(V.vvdir||V.vvms)L.push('V-V Timing: '+(V.vvdir||'LV→RV')+' '+(V.vvms||'')+' ms');L.push('')}
+  td('Setting',setDesc);
+  if(V.notes)L.push('Notes: '+V.notes);
+  return L.join('\n').trim();
+}
+const msg=t=>{$('#msg').textContent=t};
+const base=()=>'device-followup'+(V.fu?'-'+V.fu:'');
+async function save(name,data){
+  let d=null;try{d=await claude.use('downloads')}catch(e){}
+  if(!d&&typeof claude==='undefined'){
+    try{const b=data instanceof Blob?data:new Blob([data]);const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;document.body.appendChild(a);a.click();a.remove();msg('บันทึกแล้ว')}catch(e){msg('บันทึกไม่สำเร็จ')}
+    return}
+  if(!d){msg('ดาวน์โหลดไม่ได้ในมุมมองนี้ — กด Copy แทน');return}
+  try{await d.save({filename:name,data});msg('บันทึกแล้ว')}catch(e){msg(e&&e.code==='declined'?'ยกเลิก':'บันทึกไม่สำเร็จ ('+(e&&e.code||'error')+')')}
+}
+const loadJs=src=>new Promise((ok,no)=>{const e=document.createElement('script');e.src=src;e.onload=ok;e.onerror=no;document.head.appendChild(e)});
+let libP=null;
+const libs=()=>libP||(libP=Promise.all([window.html2canvas||loadJs('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'),window.jspdf||loadJs('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js')]).catch(e=>{libP=null;throw e}));
+async function shot(scale){
+  const box=document.createElement('div');box.className='rep';
+  box.style.cssText='position:fixed;left:-9999px;top:0;width:324px;padding:12px;background:#fff;border:0';
+  box.innerHTML=body();document.body.appendChild(box);
+  try{return await html2canvas(box,{scale,backgroundColor:'#fff'})}finally{box.remove()}
+}
+$('#pdf').onclick=async()=>{
+  msg('กำลังโหลดตัวสร้าง PDF...');
+  try{await libs()}catch(e){msg('โหลดตัวสร้าง PDF ไม่ได้ (ต้องต่อเน็ต) — ใช้ .html หรือ Copy แทน');return}
+  msg('กำลังสร้าง PDF...');
+  try{
+    const cv=await shot(2);
+    const pdf=new jspdf.jsPDF({unit:'mm',format:'a4'});
+    const W=cv.width/2*0.2646,H=277,ph=Math.floor(H*cv.width/W),X=(210-W)/2;
+    for(let y=0,i=0;y<cv.height;y+=ph,i++){
+      const h=Math.min(ph,cv.height-y),sl=document.createElement('canvas');
+      sl.width=cv.width;sl.height=h;sl.getContext('2d').drawImage(cv,0,y,cv.width,h,0,0,cv.width,h);
+      if(i)pdf.addPage();
+      pdf.addImage(sl.toDataURL('image/jpeg',.95),'JPEG',X,12,W,h*W/cv.width);
+    }
+    await save(base()+'.pdf',pdf.output('arraybuffer'));
+  }catch(e){msg('สร้าง PDF ไม่สำเร็จ')}
+};
+$('#img').onclick=async()=>{
+  msg('กำลังโหลดตัวสร้างรูป...');
+  try{await libs()}catch(e){msg('โหลดตัวสร้างรูปไม่ได้ (ต้องต่อเน็ต) — ใช้ .html หรือ Copy แทน');return}
+  msg('กำลังสร้างรูป...');
+  try{
+    const cv=await shot(3);
+    const b=await new Promise(r=>cv.toBlob(r,'image/png'));
+    await save(base()+'.png',b);
+  }catch(e){msg('สร้างรูปไม่สำเร็จ')}
+};
+$('#exp').onclick=()=>{
+  const css=DOC_CSS+'body{margin:24px auto;padding:0 12px}';
+  save(base()+'.html','<!DOCTYPE html><html lang="th"><head><meta charset="utf-8"><title>Device Follow-up Report</title><style>'+css+'</style></head><body>'+body()+'</body></html>');
+};
+$('#txt').onclick=()=>save(base()+'.txt',text());
+$('#cp').onclick=async()=>{
+  const t=text();
+  try{await navigator.clipboard.writeText(t);msg('คัดลอกแล้ว');return}catch(e){}
+  const a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();
+  let ok=false;try{ok=document.execCommand('copy')}catch(e){}a.remove();msg(ok?'คัดลอกแล้ว':'คัดลอกไม่ได้');
+};
+$('#clr').onclick=()=>{if(!confirm('ล้างค่าทั้งหมด?'))return;for(const k in V)delete V[k];document.querySelectorAll('[data-k]').forEach(i=>i.value='');render();qhint();msg('')};
+document.addEventListener('input',e=>{if(e.target.type==='checkbox')return;const k=e.target.dataset&&e.target.dataset.k;if(k){V[k]=e.target.value.trim();render()}});
+document.addEventListener('change',e=>{const t=e.target;if(t.type==='checkbox'&&t.dataset.k){V[t.dataset.k]=t.checked;render()}});
+$('#ltBtn').onclick=()=>{V.est=(V.est||'').startsWith('<')?(V.est||'').slice(1):'<'+(V.est||'');$('#estInp').value=V.est;render()};
+$('#gtBtn').onclick=()=>{V.lowohm=(V.lowohm||'').startsWith('>')?(V.lowohm||'').slice(1):'>'+(V.lowohm||'');$('#lowohmInp').value=V.lowohm;render()};
+$('#minLtBtn').onclick=()=>{V.minval=(V.minval||'').startsWith('<')?(V.minval||'').slice(1):'<'+(V.minval||'');$('#minInp').value=V.minval;render()};
+const Q={sense:['N/A'],imp:['>3,000'],thr:['>8.0','Non capture']},QL={sense:'Sensing',imp:'Impedance',thr:'Threshold'};
+const HINT='แตะช่อง Sensing / Impedance / Threshold เพื่อเลือกค่าพิเศษ (N/A, >3,000, >8.0, Non capture) หรือพิมพ์เองได้';
+let qel=null;
+const qhint=()=>{qel=null;$('#quick').textContent=HINT};
+document.addEventListener('focusin',e=>{
+  const t=e.target;if(t.closest&&t.closest('#quick'))return;
+  const m=t.dataset&&t.dataset.k&&t.dataset.k.match(/^(sense|imp|thr)_(A|RV|LV)$/);
+  if(!m){qhint();return}
+  qel=t;const q=$('#quick');q.innerHTML='';
+  const l=document.createElement('span');l.textContent=QL[m[1]]+' · '+m[2]+':';q.appendChild(l);
+  Q[m[1]].forEach(v=>{const b=document.createElement('button');b.type='button';b.textContent=v;
+    b.onmousedown=ev=>ev.preventDefault();
+    b.onclick=()=>{qel.value=v;V[qel.dataset.k]=v;render()};q.appendChild(b)});
+});
+qhint();
+// ---- PDF import (Medtronic Patient Information Report) ----
+let pdfP=null;
+const PDFJS='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
+const loadPdfLib=()=>pdfP||(pdfP=(async()=>{
+  if(!window.pdfjsLib)await loadJs(PDFJS+'pdf.min.js');
+  pdfjsLib.GlobalWorkerOptions.workerSrc=PDFJS+'pdf.worker.min.js';
+})().catch(e=>{pdfP=null;throw e}));
+async function readPdf(file){
+  await loadPdfLib();
+  const doc=await pdfjsLib.getDocument({data:new Uint8Array(await file.arrayBuffer())}).promise;
+  const items=[];
+  for(let p=1;p<=doc.numPages;p++){
+    const tc=await (await doc.getPage(p)).getTextContent();
+    tc.items.forEach(i=>{if(i.str&&i.str.trim())items.push({s:i.str,x:Math.round(i.transform[4]),y:Math.round(i.transform[5])-(p-1)*2000})});
+  }
+  return items;
+}
+const MON={jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+const toDate=s=>{const m=String(s).match(/(\d{1,2})\W+([A-Za-z]{3})[A-Za-z]*\W+(\d{4})/);if(!m)return null;const mo=MON[m[2].toLowerCase()];return mo?m[3]+'-'+String(mo).padStart(2,'0')+'-'+m[1].padStart(2,'0'):null};
+const numOf=s=>{const m=String(s).replace(/\^/g,'').match(/^\s*([<>]=?)?\s*(\d+(?:\.\d+)?)/);return m?(m[1]||'')+m[2]:null};
+function parseReport(items){
+  const rows=[];
+  items.filter(i=>i.s.trim()).sort((a,b)=>b.y-a.y||a.x-b.x).forEach(i=>{const r=rows.find(r=>Math.abs(r.y-i.y)<=2);if(r)r.it.push(i);else rows.push({y:i.y,it:[i]})});
+  rows.forEach(r=>r.it.sort((a,b)=>a.x-b.x));
+  const txt=r=>r.it.map(i=>i.s).join(' ').replace(/\s+/g,' ').trim();
+  const f={},got=[];const put=(k,v,l)=>{f[k]=v;got.push(l)};
+  for(const r of rows){
+    const t=txt(r);
+    if(/^Device:/i.test(t)){
+      const d=(t.match(/Device:\s*(.*?)\s*Serial Number:/i)||[])[1];
+      const tok=d&&d.split(' ').pop();if(tok&&/^[A-Za-z0-9]{4,}$/.test(tok))put('model',tok,'Model');
+      const dv=toDate((t.match(/Date of Visit:\s*(.*)$/i)||[])[1]||'');if(dv)put('fu',dv,'วันที่ตรวจ');
+    }
+  }
+  const ii=rows.findIndex(r=>txt(r)==='Implant');
+  if(ii>=0){const r=rows.slice(ii+1,ii+3).find(r=>/^Implant Date/i.test(txt(r)));const d=r&&toDate(txt(r));if(d)put('doi',d,'DOI')}
+  const hi=rows.findIndex(r=>r.it.length>=2&&r.it.every(i=>/^(ATRIAL|RA|RV|LV)$/i.test(i.s.trim())));
+  if(hi>=0){
+    const cols=rows[hi].it.map(i=>({c:/^(ATRIAL|RA)$/i.test(i.s.trim())?'A':i.s.trim().toUpperCase(),x:i.x}));
+    const x0=cols[0].x-15;
+    const rules=[[/p\/?r wave|p wave|r wave/i,'sense','Sensing'],[/pacing threshold amp/i,'thr','Threshold'],[/pulse width/i,'thrms','at(ms)'],[/pacing impedance/i,'imp','Impedance']];
+    for(const r of rows.slice(hi+1)){
+      const label=r.it.filter(i=>i.x<x0).map(i=>i.s).join(' ');
+      const rule=rules.find(u=>u[0].test(label));if(!rule)continue;
+      r.it.filter(i=>i.x>=x0).forEach(i=>{
+        const col=cols.reduce((a,b)=>Math.abs(b.x-i.x)<Math.abs(a.x-i.x)?b:a);
+        const v=numOf(i.s);if(v!==null)put(rule[1]+'_'+col.c,v,rule[2]+' '+col.c);
+      });
+    }
+  }
+  return{fields:f,got};
+}
+function applyImport(f){
+  for(const k in f){V[k]=f[k];const el=document.querySelector('[data-k="'+k+'"]');if(el)el.value=f[k]}
+  render();
+}
+$('#pdfIn').onchange=async e=>{
+  const file=e.target.files[0];if(!file)return;
+  msg('กำลังอ่าน PDF...');
+  try{
+    const r=parseReport(await readPdf(file));
+    if(!r.got.length)msg('อ่านไฟล์ได้ แต่ไม่พบค่าที่รู้จัก (รูปแบบอาจต่างจากตัวอย่าง)');
+    else{applyImport(r.fields);msg('นำเข้า '+r.got.length+' ค่า: '+r.got.join(', ')+' — ตรวจก่อน export')}
+  }catch(err){msg('อ่าน PDF ไม่สำเร็จ (ต้องต่อเน็ตเพื่อโหลดตัวอ่าน PDF): '+((err&&err.message)||'error'))}
+  e.target.value='';
+};
+render();
+</script>
+</body>
+</html>
